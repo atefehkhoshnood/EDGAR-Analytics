@@ -1,6 +1,5 @@
 # Table of Contents
-1. [Understanding the challenge](README.md#understanding-the-challenge)
-2. [Introduction](README.md#introduction)
+1. [Introduction](README.md#introduction)
 3. [Challenge summary](README.md#challenge-summary)
 4. [Details of challenge](README.md#details-of-challenge)
 5. [Implementation details](README.md#implementation-details)
@@ -11,17 +10,10 @@
 10. [Repo directory structure](README.md#repo-directory-structure)
 11. [Testing your directory structure and output format](README.md#testing-your-directory-structure-and-output-format)
 11. [Instructions to submit your solution](README.md#instructions-to-submit-your-solution)
-13. [FAQ](README.md#faq)
-
-# Understanding the challenge
-
-We highly recommend that you take a few dedicated minutes to read this README in its entirety before starting to think about potential solutions. You'll probably find it useful to review the examples and understand the problem at a high-level before digging into the specific details, many of which are covered in the FAQ.
 
 # Introduction
 
-Many investors, researchers, journalists and others use the Securities and Exchange Commission's Electronic Data Gathering, Analysis and Retrieval (EDGAR) system to retrieve financial documents, whether they are doing a deep dive into a particular company's financials or learning new information that a company has revealed through their filings. 
-
-The SEC maintains EDGAR weblogs showing which IP addresses have accessed which documents for what company, and at what day and time this occurred.
+The Securities and Exchange Commission's (SEC) Electronic Data Gathering, Analysis and Retrieval (EDGAR) system keeps track of which IP addresses have accessed which documents for what company, and at what day and time this occurred.
 
 Imagine the SEC has asked you to take the data and produce a dashboard that would provide a real-time view into how users are accessing EDGAR, including how long they stay and the number of documents they access during the visit.
 
