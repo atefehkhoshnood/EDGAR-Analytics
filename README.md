@@ -42,7 +42,8 @@ edgar-analytics~$ ./run.sh
 
 The program checks if the input files are not empty. There are 3 tests within the `insight_testsuite` folder which can be run by:
 
-insight_testsuite~$ ./run_tests.sh 
+insight_testsuite~$ ./run_tests.sh
+
 The program in the current version passes all the tests.
 The source files are within `src` directory; `sessionization.py` which includes the main program and `sessionization_fun.py` which includes defined functions. The `input` directory includes several log files with different sizes, and the `inactivity_period.txt` file which contains the inactivity period. The `log.csv` file can be replaced by any other log files in the `input` directory with the following command:
 
