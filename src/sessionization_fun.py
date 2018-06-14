@@ -7,7 +7,7 @@ timeFormat = '%H:%M:%S'
 datetimeFormat = dateFormat + ' ' + timeFormat
 
 
-def create_new_session(IP, start_date_time, count_webpage_request, end_date_time, ip, current_date_time):
+def create_session(IP, start_date_time, count_webpage_request, end_date_time, ip, current_date_time):
     new_IP = np.append(IP,ip)
     new_start_date_time = np.append(start_date_time,current_date_time)
     new_count_webpage_request = np.append(count_webpage_request,1)

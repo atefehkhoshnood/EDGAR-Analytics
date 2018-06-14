@@ -7,12 +7,18 @@
 ########################################
 
 import sys
+import os
 import numpy as np
 import csv
 from datetime import datetime, date, time, timedelta
-from sessionization_fun import create_new_session, remove_expired_session, generate_ending_report
+from sessionization_fun import create_session, delete_inactive_session, get_info_for_outputfile
 
 start_t = datetime.now()
+
+global dateFormat, timeFormat, datetimeFormat
+dateFormat = '%Y-%m-%d'
+timeFormat = '%H:%M:%S'
+datetimeFormat = dateFormat + ' ' + timeFormat
 
 # setup input and output files
 
@@ -22,86 +28,90 @@ outputfile_name = sys.argv[3]
 
 # creating output file
 outputfile = open(outputfile_name,'w')
-# openning of log file
-logfile = open(logfile_name)
+
+logfile_size = os.path.getsize(logfile_name)
+inactivity_periodfile_size = os.path.getsize(inactivity_periodfile_name)
+if logfile_size>0 and inactivity_periodfile_size>0:
+    # openning inactivity period file
+    inactivity_periodfile = open(inactivity_periodfile_name,'r')
+    # openning of log file
+    logfile = open(logfile_name,'r')
+else:
+    print('one or both input files are empty.')
+    exit()
+
 # reading the inactivity period from file
-inactivity_periodfile = open(inactivity_periodfile_name)
 inactivity_period = int(inactivity_periodfile.read())
 inactivity_periodfile.close()
 
-'-- Set date-time formatting (ideally this should be read from something like a config file) --'
-global __dateFormat__, __timeFormat__, __datetimeFormat__
-__dateFormat__ = '%Y-%m-%d'
-__timeFormat__ = '%H:%M:%S'
-__datetimeFormat__ = __dateFormat__ + ' ' + __timeFormat__
-
-
 logfile_content = csv.reader(logfile)
 
-'-- Some filtering parameters for the log file --'
-colnameDict = {'ip':0, 'date':1, 'time':2, 'zone':3, 'cik':4, 'accession':5, 'extention':6, 'code':7,
-    'size':8, 'idx':9, 'norefer':10, 'noagent':11, 'find':12, 'crawler':13, 'browser':14}
-itemOfInterest = [colnameDict['ip'],colnameDict['date'],colnameDict['time'],colnameDict['cik'],colnameDict['accession'] ]
+headers = next(logfile_content)
+
+# determining order of fields in a row of log file
+ip_index = headers.index('ip')
+date_index = headers.index('date')
+time_index = headers.index('time')
+cik_index = headers.index('cik')
+accession_index = headers.index('accession')
+extention_index = headers.index('extention')
 
 
-# Create some arrays
-IPs = np.ndarray(0,dtype=str)
-StartDateTime = np.ndarray(0,dtype=datetime)
-numDocRequested = np.ndarray(0,dtype=int)
-LastRequestTime = np.ndarray(0,dtype=datetime)
+# Initializing NumPy arrays
+IP = np.ndarray(0,dtype=str)
+start_date_time = np.ndarray(0,dtype=datetime)
+count_webpage_request = np.ndarray(0,dtype=int)
+end_date_time = np.ndarray(0,dtype=datetime)
 
-' ---- Process each line of the csv as if it is streamed in real-time ---- '
-#outputfile.mode = 'a'
-for dataLine in logfile_content:
-    if logfile_content.line_num == 1: continue
+# reading log file line by line until end of file is reached while:
+# - storing data such as ip, start date&time, number of visits, and time of last request in NumPy arrays 
+# - checking if any ip is inactive and writing the session info to output file
+# - deleting inactive ips and releasing space 
+for row in logfile_content:
     
-    '====== Start processing per stream ======'
-    ip = dataLine[colnameDict['ip']]
-    accessDate = dataLine[colnameDict['date']]
-    accessTime = dataLine[colnameDict['time']]
-    current_datetime = accessDate + ' ' + accessTime
+    ip = row[ip_index]
+    accessDate = row[date_index]
+    accessTime = row[time_index]
+    current_date_time = accessDate + ' ' + accessTime
     
-    current_datetime = datetime.strptime(current_datetime, __datetimeFormat__)
-    
-    '---- Very first line being stream?? ----'
-    if IPs.size == 0:
-        IPs, StartDateTime, numDocRequested, LastRequestTime = create_new_session(IPs, StartDateTime, numDocRequested, LastRequestTime, ip, current_datetime)
+    current_date_time = datetime.strptime(current_date_time, datetimeFormat)
+    #print (IP.size)
+# checking if this is the first data  
+    if IP.size == 0:
+        IP, start_date_time, count_webpage_request, end_date_time = create_session(IP, start_date_time, count_webpage_request, end_date_time, ip, current_date_time)
         continue
     
-    '---- Check if this IP is new or part of the previously opened session ----'
-    intersectMask = np.in1d( IPs, np.array(ip) )
-    intersectIndex = np.arange(IPs.size)[intersectMask]
+# checking if the ip is new or it is a repeated ip   
+    repeated_ip_mask = np.in1d( IP, np.array(ip) )
+    repeated_ip_index = np.arange(IP.size)[repeated_ip_mask]
     
-    '---- If existed, add a request to the corresponding session ----'
-    if intersectIndex.size == 1:
-        LastRequestTime[intersectIndex[0]] = current_datetime
-        numDocRequested[intersectIndex[0]] = numDocRequested[intersectIndex[0]] + 1
-    elif intersectIndex.size == 0:
-        '---- If new, create a new session and add to sessions list ----'
-        IPs, StartDateTime, numDocRequested, LastRequestTime = create_new_session(IPs, StartDateTime, numDocRequested, LastRequestTime, ip, current_datetime)
+# if a repeated ip, increase webpage request by one and refresh end date&time tag to current date&time
+    if repeated_ip_index.size == 1:
+        end_date_time[repeated_ip_index[0]] = current_date_time
+        count_webpage_request[repeated_ip_index[0]] = count_webpage_request[repeated_ip_index[0]] + 1
+# if a new ip, add its info to corresponding arrays
+    elif repeated_ip_index.size == 0:
+        IP, start_date_time, count_webpage_request, end_date_time = create_session(IP, start_date_time, count_webpage_request, end_date_time, ip, current_date_time)
     
-    '---- Check all currently opened sessions to identify which session(s) has expired ----'
-    expiredSessionsMask = np.zeros(IPs.size, dtype = bool)
-    for sessIndex, sess_lastRequestTime in enumerate(LastRequestTime):
-        elapsedTime = current_datetime - sess_lastRequestTime
-        expirestatus = elapsedTime.seconds > inactivity_period
-        expiredSessionsMask[sessIndex] = expirestatus
-        '-- If expire, generate the session report --'
-        if expirestatus:
-            endingReport = generate_ending_report(IPs[sessIndex], StartDateTime[sessIndex], LastRequestTime[sessIndex], numDocRequested[sessIndex])
-            outputfile.write('%s\n' % endingReport)
+# searching for inactive ips in the entire dataset
+    inactive_ip_mask = np.zeros(IP.size, dtype = bool)
+    for sessIndex, sess_end_date_time in enumerate(end_date_time):
+        time_diff = current_date_time - sess_end_date_time
+        inactivity = time_diff.seconds > inactivity_period
+        inactive_ip_mask[sessIndex] = inactivity
+        if inactivity:
+            outputfile_content = get_info_for_outputfile(IP[sessIndex], start_date_time[sessIndex], end_date_time[sessIndex], count_webpage_request[sessIndex])
+            outputfile.write('%s\n' % outputfile_content)
 
-    '---- Remove expired sessions out of the list of current opened sessions ----'
-    IPs, StartDateTime, numDocRequested, LastRequestTime = remove_expired_session(IPs, StartDateTime, numDocRequested, LastRequestTime, expiredSessionsMask)
+# deleting inactive ip from data structure 
+    IP, start_date_time, count_webpage_request, end_date_time = delete_inactive_session(IP, start_date_time, count_webpage_request, end_date_time, inactive_ip_mask)
 
-    '====== End processing per stream ======'
-
-'====== End of stream, set all current sessions to expire ======'
-for k in list(range(0,IPs.size)):
-    endingReport = generate_ending_report(IPs[k], StartDateTime[k], LastRequestTime[k], numDocRequested[k])
-    outputfile.write('%s\n' % endingReport)
-
-del IPs, StartDateTime, numDocRequested, LastRequestTime
+# analysing what is left in main data structure, because end of log file is reached
+for k in range(0,IP.size):
+    outputfile_content = get_info_for_outputfile(IP[k], start_date_time[k], end_date_time[k], count_webpage_request[k])
+    outputfile.write('%s\n' % outputfile_content)
+# deleting all the created NumPy arrays
+del IP, start_date_time, count_webpage_request, end_date_time
 
 outputfile.close()
 end_t = datetime.now()

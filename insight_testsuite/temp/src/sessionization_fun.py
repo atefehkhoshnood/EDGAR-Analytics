@@ -1,34 +1,28 @@
 import numpy as np
 from datetime import datetime, date, time, timedelta
 
-'-- Set date-time formatting (ideally this should be read from something like a config file) --'
-global __dateFormat__, __timeFormat__, __datetimeFormat__
-__dateFormat__ = '%Y-%m-%d'
-__timeFormat__ = '%H:%M:%S'
-__datetimeFormat__ = __dateFormat__ + ' ' + __timeFormat__
+global dateFormat, timeFormat, datetimeFormat
+dateFormat = '%Y-%m-%d'
+timeFormat = '%H:%M:%S'
+datetimeFormat = dateFormat + ' ' + timeFormat
 
 
-def create_new_session(IPs, StartDateTime, numDocRequested, LastRequestTime, ip, current_datetime):
-    new_IPs = np.append(IPs,ip)
-    new_StartDateTime = np.append(StartDateTime,current_datetime)
-    new_numDocRequested = np.append(numDocRequested,1)
-    new_LastRequestTime = np.append(LastRequestTime,current_datetime)
-    return new_IPs, new_StartDateTime, new_numDocRequested, new_LastRequestTime
+def create_session(IP, start_date_time, count_webpage_request, end_date_time, ip, current_date_time):
+    new_IP = np.append(IP,ip)
+    new_start_date_time = np.append(start_date_time,current_date_time)
+    new_count_webpage_request = np.append(count_webpage_request,1)
+    new_end_date_time = np.append(end_date_time,current_date_time)
+    return new_IP, new_start_date_time, new_count_webpage_request, new_end_date_time
 
-def remove_expired_session(IPs, StartDateTime, numDocRequested, LastRequestTime, expiredSessionsMask):
-    notExpiredMask = np.logical_not(expiredSessionsMask)
-    new_IPs = IPs[notExpiredMask]
-    new_StartDateTime = StartDateTime[notExpiredMask]
-    new_numDocRequested = numDocRequested[notExpiredMask]
-    new_LastRequestTime = LastRequestTime[notExpiredMask]
-    return new_IPs, new_StartDateTime, new_numDocRequested, new_LastRequestTime
+def delete_inactive_session(IP, start_date_time, count_webpage_request, end_date_time, inactive_ip_mask):
+    active_ip_mask = np.logical_not(inactive_ip_mask)
+    new_IP = IP[active_ip_mask]
+    new_start_date_time = start_date_time[active_ip_mask]
+    new_count_webpage_request = count_webpage_request[active_ip_mask]
+    new_end_date_time = end_date_time[active_ip_mask]
+    return new_IP, new_start_date_time, new_count_webpage_request, new_end_date_time
 
-def generate_ending_report(ip, startDateTime, lastRequestTime, numDocRequested):
-    sessionDuration = lastRequestTime - startDateTime
-    sessionDuration = sessionDuration + timedelta(seconds=1) # because session duration is inclusive
-    endingReport = ip + ',' + \
-                    startDateTime.strftime(__datetimeFormat__) + ',' + \
-                    lastRequestTime.strftime(__datetimeFormat__) + ',' + \
-                    str(sessionDuration.seconds) + ',' + \
-                    str(numDocRequested)
-    return endingReport
+def get_info_for_outputfile(ip, start_date_time, end_date_time, count_webpage_request):
+    dt = end_date_time - start_date_time + timedelta(seconds=1) # because session duration is inclusive
+    outputfile_content = ip + ',' + start_date_time.strftime(datetimeFormat) + ',' + end_date_time.strftime(datetimeFormat) + ',' + str(dt.seconds) + ',' + str(count_webpage_request)
+    return outputfile_content

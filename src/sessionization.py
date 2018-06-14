@@ -7,10 +7,11 @@
 ########################################
 
 import sys
+import os
 import numpy as np
 import csv
 from datetime import datetime, date, time, timedelta
-from sessionization_fun import create_new_session, delete_inactive_session, get_info_for_outputfile
+from sessionization_fun import create_session, delete_inactive_session, get_info_for_outputfile
 
 start_t = datetime.now()
 
@@ -27,10 +28,19 @@ outputfile_name = sys.argv[3]
 
 # creating output file
 outputfile = open(outputfile_name,'w')
-# openning of log file
-logfile = open(logfile_name)
+
+logfile_size = os.path.getsize(logfile_name)
+inactivity_periodfile_size = os.path.getsize(inactivity_periodfile_name)
+if logfile_size>0 and inactivity_periodfile_size>0:
+    # openning inactivity period file
+    inactivity_periodfile = open(inactivity_periodfile_name,'r')
+    # openning of log file
+    logfile = open(logfile_name,'r')
+else:
+    print('one or both input files are empty.')
+    exit()
+
 # reading the inactivity period from file
-inactivity_periodfile = open(inactivity_periodfile_name)
 inactivity_period = int(inactivity_periodfile.read())
 inactivity_periodfile.close()
 
@@ -65,10 +75,10 @@ for row in logfile_content:
     current_date_time = accessDate + ' ' + accessTime
     
     current_date_time = datetime.strptime(current_date_time, datetimeFormat)
-    
+    #print (IP.size)
 # checking if this is the first data  
     if IP.size == 0:
-        IP, start_date_time, count_webpage_request, end_date_time = create_new_session(IP, start_date_time, count_webpage_request, end_date_time, ip, current_date_time)
+        IP, start_date_time, count_webpage_request, end_date_time = create_session(IP, start_date_time, count_webpage_request, end_date_time, ip, current_date_time)
         continue
     
 # checking if the ip is new or it is a repeated ip   
@@ -81,7 +91,7 @@ for row in logfile_content:
         count_webpage_request[repeated_ip_index[0]] = count_webpage_request[repeated_ip_index[0]] + 1
 # if a new ip, add its info to corresponding arrays
     elif repeated_ip_index.size == 0:
-        IP, start_date_time, count_webpage_request, end_date_time = create_new_session(IP, start_date_time, count_webpage_request, end_date_time, ip, current_date_time)
+        IP, start_date_time, count_webpage_request, end_date_time = create_session(IP, start_date_time, count_webpage_request, end_date_time, ip, current_date_time)
     
 # searching for inactive ips in the entire dataset
     inactive_ip_mask = np.zeros(IP.size, dtype = bool)
@@ -97,7 +107,7 @@ for row in logfile_content:
     IP, start_date_time, count_webpage_request, end_date_time = delete_inactive_session(IP, start_date_time, count_webpage_request, end_date_time, inactive_ip_mask)
 
 # analysing what is left in main data structure, because end of log file is reached
-for k in list(range(0,IP.size)):
+for k in range(0,IP.size):
     outputfile_content = get_info_for_outputfile(IP[k], start_date_time[k], end_date_time[k], count_webpage_request[k])
     outputfile.write('%s\n' % outputfile_content)
 # deleting all the created NumPy arrays
