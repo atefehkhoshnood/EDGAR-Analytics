@@ -1,41 +1,28 @@
+import numpy as np
 from datetime import datetime, date, time, timedelta
-from collections import Counter
-from random import randint
+
+global dateFormat, timeFormat, datetimeFormat
+dateFormat = '%Y-%m-%d'
+timeFormat = '%H:%M:%S'
+datetimeFormat = dateFormat + ' ' + timeFormat
 
 
-def is_ip_repeated_dic(ip,data_dict):
-	i = 0
-	count_webpage_request = 0
-	for key in data_dict:
-		if ip in key:
-			count_webpage_request += data_dict[key]
-			i +=1
-	return (i,count_webpage_request)
+def create_new_session(IP, start_date_time, count_webpage_request, end_date_time, ip, current_date_time):
+    new_IP = np.append(IP,ip)
+    new_start_date_time = np.append(start_date_time,current_date_time)
+    new_count_webpage_request = np.append(count_webpage_request,1)
+    new_end_date_time = np.append(end_date_time,current_date_time)
+    return new_IP, new_start_date_time, new_count_webpage_request, new_end_date_time
 
-def is_ip_repeated_list(ip,data_list):
-	#i = data_list.count(ip)
-	i = 0
-	for key in data_list:
-		if ip in key:
-			i +=1
-	return i
-def get_info_for_outputfile(ip,no_repeated,data_dict):
-	i = 0
-	for k in data_dict:
-		if k[0] == ip:
-			i +=1
-			if i == 1:
-				time_start_0, time_start_1 = k[1]
-				time_start = datetime.strptime(k[1][1],'%H:%M:%S')
-			if i == no_repeated:
-				time_end_0, time_end_1 = k[1]
-				time_end = datetime.strptime(k[1][1],'%H:%M:%S')
-	time_diff = time_end - time_start
-	time_diff_sec = time_diff.total_seconds() + 1 
-	return(time_diff_sec,time_start_0+' '+time_start_1,time_end_0+' '+time_end_1)
+def delete_inactive_session(IP, start_date_time, count_webpage_request, end_date_time, inactive_ip_mask):
+    active_ip_mask = np.logical_not(inactive_ip_mask)
+    new_IP = IP[active_ip_mask]
+    new_start_date_time = start_date_time[active_ip_mask]
+    new_count_webpage_request = count_webpage_request[active_ip_mask]
+    new_end_date_time = end_date_time[active_ip_mask]
+    return new_IP, new_start_date_time, new_count_webpage_request, new_end_date_time
 
-def random_pick_of_data(logsize,maxsize):
-	i=randint(1, 2)
-	if logsize>maxsize and i !=1:
-		return False
-	return True;
+def get_info_for_outputfile(ip, start_date_time, end_date_time, count_webpage_request):
+    dt = end_date_time - start_date_time + timedelta(seconds=1) # because session duration is inclusive
+    outputfile_content = ip + ',' + start_date_time.strftime(datetimeFormat) + ',' + end_date_time.strftime(datetimeFormat) + ',' + str(dt.seconds) + ',' + str(count_webpage_request)
+    return outputfile_content

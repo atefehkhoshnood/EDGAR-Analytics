@@ -1,41 +1,34 @@
+import numpy as np
 from datetime import datetime, date, time, timedelta
-from collections import Counter
-from random import randint
+
+'-- Set date-time formatting (ideally this should be read from something like a config file) --'
+global __dateFormat__, __timeFormat__, __datetimeFormat__
+__dateFormat__ = '%Y-%m-%d'
+__timeFormat__ = '%H:%M:%S'
+__datetimeFormat__ = __dateFormat__ + ' ' + __timeFormat__
 
 
-def is_ip_repeated_dic(ip,data_dict):
-	i = 0
-	count_webpage_request = 0
-	for key in data_dict:
-		if ip in key:
-			count_webpage_request += data_dict[key]
-			i +=1
-	return (i,count_webpage_request)
+def create_new_session(IPs, StartDateTime, numDocRequested, LastRequestTime, ip, current_datetime):
+    new_IPs = np.append(IPs,ip)
+    new_StartDateTime = np.append(StartDateTime,current_datetime)
+    new_numDocRequested = np.append(numDocRequested,1)
+    new_LastRequestTime = np.append(LastRequestTime,current_datetime)
+    return new_IPs, new_StartDateTime, new_numDocRequested, new_LastRequestTime
 
-def is_ip_repeated_list(ip,data_list):
-	#i = data_list.count(ip)
-	i = 0
-	for key in data_list:
-		if ip in key:
-			i +=1
-	return i
-def get_info_for_outputfile(ip,no_repeated,data_dict):
-	i = 0
-	for k in data_dict:
-		if k[0] == ip:
-			i +=1
-			if i == 1:
-				time_start_0, time_start_1 = k[1]
-				time_start = datetime.strptime(k[1][1],'%H:%M:%S')
-			if i == no_repeated:
-				time_end_0, time_end_1 = k[1]
-				time_end = datetime.strptime(k[1][1],'%H:%M:%S')
-	time_diff = time_end - time_start
-	time_diff_sec = time_diff.total_seconds() + 1 
-	return(time_diff_sec,time_start_0+' '+time_start_1,time_end_0+' '+time_end_1)
+def remove_expired_session(IPs, StartDateTime, numDocRequested, LastRequestTime, expiredSessionsMask):
+    notExpiredMask = np.logical_not(expiredSessionsMask)
+    new_IPs = IPs[notExpiredMask]
+    new_StartDateTime = StartDateTime[notExpiredMask]
+    new_numDocRequested = numDocRequested[notExpiredMask]
+    new_LastRequestTime = LastRequestTime[notExpiredMask]
+    return new_IPs, new_StartDateTime, new_numDocRequested, new_LastRequestTime
 
-def random_pick_of_data(logsize,maxsize):
-	i=randint(1, 2)
-	if logsize>maxsize and i !=1:
-		return False
-	return True;
+def generate_ending_report(ip, startDateTime, lastRequestTime, numDocRequested):
+    sessionDuration = lastRequestTime - startDateTime
+    sessionDuration = sessionDuration + timedelta(seconds=1) # because session duration is inclusive
+    endingReport = ip + ',' + \
+                    startDateTime.strftime(__datetimeFormat__) + ',' + \
+                    lastRequestTime.strftime(__datetimeFormat__) + ',' + \
+                    str(sessionDuration.seconds) + ',' + \
+                    str(numDocRequested)
+    return endingReport
