@@ -36,6 +36,8 @@ Note that for log files larger than 12 M, the program slows down. It does not cr
 
 ## Second Solution
 The first solution is unable to handle large log files and slows down to levels that makes the use of Python dictionary questionable. The reason is behind the fact that searching for a key is time consuming when the dictionary gets large. Note that in the first solution the key is a tuple structure with type string. I code a second solution using NumPy arrays. They have optimized routines for fast computation and searching such as `Numpy.arange` and `Numpy.in1d`. Also arrays are indexed by integers and may be accessed faster, and occupy less memory. I use 4 different arrays to store unique sessions which are characterized by ip value, start date and time tag, end date and time tag, and number of webpage visits. If the time difference between the end date and time tag and current time is larger than the inactivity period, that session has ended. Then, it is written in the output file and all four arrays are refreshed by deleting the info of ended session.
+One also big difference between the two solutions is that in the first one, all the visits that build a session group together when I search for inactive ips, but in the second approach I group them as I read the log file. which reduces number of for loops and searching in the data set.
+
 The speed performance for the second solution is summarized in the below table.
 
 | Approximate log file size | Run time (H:M:S.mS) |
